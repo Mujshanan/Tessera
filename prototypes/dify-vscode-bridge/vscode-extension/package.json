@@ -19,7 +19,8 @@
       "title": "Tessera Bridge",
       "properties": {
         "tessera.pythonPath": { "type": "string", "default": "python", "description": "Python interpreter command." },
-        "tessera.bridge.port": { "type": "number", "default": 8765, "minimum": 1024, "maximum": 65535 }
+        "tessera.bridge.port": { "type": "number", "default": 8765, "minimum": 1024, "maximum": 65535 },
+        "tessera.bridge.allowNetwork": { "type": "boolean", "default": false, "description": "Bind to all interfaces for a trusted local container test. Enable only with firewall restrictions and a private bearer token." }
       }
     }
   }
