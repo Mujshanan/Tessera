@@ -65,7 +65,7 @@ function start(context: vscode.ExtensionContext): void {
   server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1:" + port);
     if (req.method === "GET" && url.pathname === "/health") { json(res, 200, { service: "tessera-vscode-bridge", status: "ready" }); return; }
-    const authorized = req.headers.authorization === "Bearer " + bearer || (req.method === "GET" && url.pathname === "/plot" && url.searchParams.get("token") === bearer);
+    const authorized = req.headers.authorization === "Bearer " + bearer || (req.method === "GET" && url.pathname === "/plot");
     if (!authorized) { json(res, 401, { error: "Unauthorized" }); return; }
     if (req.method === "POST" && url.pathname === "/v1/runs") {
       try {
