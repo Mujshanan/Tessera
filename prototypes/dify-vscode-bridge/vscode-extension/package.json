@@ -1,0 +1,26 @@
+{
+  "name": "tessera-dify-vscode-bridge",
+  "displayName": "Tessera Dify VS Code Bridge",
+  "description": "Experimental local adapter for running workspace Python scripts from Dify.",
+  "version": "0.0.1",
+  "publisher": "mujshanan",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onCommand:tesseraBridge.start", "onCommand:tesseraBridge.stop"],
+  "main": "./out/extension.js",
+  "scripts": { "compile": "tsc -p ./", "watch": "tsc -watch -p ./", "vscode:prepublish": "npm run compile" },
+  "devDependencies": { "@types/node": "^20.14.0", "@types/vscode": "^1.90.0", "typescript": "^5.5.0" },
+  "contributes": {
+    "commands": [
+      { "command": "tesseraBridge.start", "title": "Tessera Bridge: Start Local Server" },
+      { "command": "tesseraBridge.stop", "title": "Tessera Bridge: Stop Local Server" }
+    ],
+    "configuration": {
+      "title": "Tessera Bridge",
+      "properties": {
+        "tessera.pythonPath": { "type": "string", "default": "python", "description": "Python interpreter command." },
+        "tessera.bridge.port": { "type": "number", "default": 8765, "minimum": 1024, "maximum": 65535 }
+      }
+    }
+  }
+}
