@@ -21,7 +21,7 @@ The bridge is a replaceable test adapter, not Tessera's final execution engine.
 5. Copy the bearer token from the Tessera Bridge output channel.
 6. Install NumPy in the configured interpreter: python -m pip install numpy.
 7. POST to http://127.0.0.1:8765/v1/runs with JSON: {"script":"example/numpy_plot.py","input":{"samples":80,"amplitude":2.0}}.
-8. Poll /v1/runs/{runId}; open /plot?token={token} to view the latest successful result.
+8. Poll /v1/runs/{runId}; open /plot and paste the bearer token into the page to view the latest successful result.
 
 ## Dify workflow
 
