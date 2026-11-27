@@ -57,12 +57,16 @@ function runPython(file: string, input: unknown, record: Run): void {
 }
 function start(context: vscode.ExtensionContext): void {
   if (server) return;
-  const port = vscode.workspace.getConfiguration("tessera.bridge").get<number>("port", 8765);
+  const config = vscode.workspace.getConfiguration("tessera.bridge");
+  const port = config.get<number>("port", 8765);
+  const allowNetwork = config.get<boolean>("allowNetwork", false);
+  const host = allowNetwork ? "0.0.0.0" : "127.0.0.1";
   bearer = crypto.randomBytes(24).toString("hex");
   server = http.createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1:" + port);
     if (req.method === "GET" && url.pathname === "/health") { json(res, 200, { service: "tessera-vscode-bridge", status: "ready" }); return; }
-    if (req.headers.authorization !== "Bearer " + bearer) { json(res, 401, { error: "Unauthorized" }); return; }
+    const authorized = req.headers.authorization === "Bearer " + bearer || (req.method === "GET" && url.pathname === "/plot" && url.searchParams.get("token") === bearer);
+    if (!authorized) { json(res, 401, { error: "Unauthorized" }); return; }
     if (req.method === "POST" && url.pathname === "/v1/runs") {
       try {
         const data = await body(req);
@@ -88,11 +92,11 @@ function start(context: vscode.ExtensionContext): void {
     json(res, 404, { error: "Not found" });
   });
   server.on("error", err => { log.appendLine("Server error: " + err.message); vscode.window.showErrorMessage("Tessera Bridge: " + err.message); server = undefined; });
-  server.listen(port, "127.0.0.1", () => {
-    log.appendLine("Listening on http://127.0.0.1:" + port);
+  server.listen(port, host, () => {
+    log.appendLine("Listening on http://" + host + ":" + port);
     log.appendLine("Bearer token: " + bearer);
-    log.appendLine("Loopback only. Keep the token private.");
-    vscode.window.showInformationMessage("Tessera Bridge listening on port " + port);
+    log.appendLine(allowNetwork ? "Network binding enabled: restrict with OS firewall; never expose publicly." : "Loopback only.");
+    vscode.window.showInformationMessage("Tessera Bridge listening on " + host + ":" + port);
   });
   log.show(true);
 }
