@@ -1,0 +1,43 @@
+name: Dify VS Code bridge prototype checks
+
+on:
+  push:
+    branches: [prototype/dify-vscode-numpy-bridge]
+  pull_request:
+    branches: [main]
+    paths:
+      - "prototypes/dify-vscode-bridge/**"
+      - ".github/workflows/dify-vscode-bridge.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install extension dependencies
+        working-directory: prototypes/dify-vscode-bridge/vscode-extension
+        run: npm install
+      - name: Compile VS Code extension
+        working-directory: prototypes/dify-vscode-bridge/vscode-extension
+        run: npm run compile
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install NumPy
+        run: python -m pip install numpy
+      - name: NumPy JSON contract smoke test
+        run: |
+          printf '{"samples": 101, "amplitude": 1.5}' | python prototypes/dify-vscode-bridge/example/numpy_plot.py > /tmp/tessera-result.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("/tmp/tessera-result.json").read_text())
+          assert data["label"] == "NumPy sine wave"
+          assert len(data["x"]) == 101
+          assert len(data["y"]) == 101
+          assert abs(max(data["y"]) - 1.5) < 1e-8
+          print("NumPy JSON contract smoke test passed")
+          PY
