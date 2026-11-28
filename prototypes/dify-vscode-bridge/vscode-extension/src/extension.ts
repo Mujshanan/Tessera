@@ -32,10 +32,16 @@ function scriptPath(value: unknown): string {
   if (!root) throw new Error("Open a VS Code workspace folder first");
   if (typeof value !== "string" || !value.toLowerCase().endsWith(".py") || path.isAbsolute(value)) throw new Error("script must be a relative .py path");
   const target = path.resolve(root, value);
-  const relative = path.relative(root, target);
-  if (relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("Script path escapes workspace");
   if (!fs.existsSync(target) || !fs.statSync(target).isFile()) throw new Error("Python script not found");
-  return target;
+  // Resolve symlinks as well as ".." segments; a workspace-local symlink must
+  // not be usable to execute a Python file outside the workspace.
+  const realRoot = fs.realpathSync(root);
+  const realTarget = fs.realpathSync(target);
+  const relative = path.relative(realRoot, realTarget);
+  if (relative === ".." || relative.startsWith(".." + path.sep) || path.isAbsolute(relative)) {
+    throw new Error("Resolved script path escapes workspace");
+  }
+  return realTarget;
 }
 function runPython(file: string, input: unknown, record: Run): void {
   const python = vscode.workspace.getConfiguration("tessera").get<string>("pythonPath", "python");
@@ -45,9 +51,11 @@ function runPython(file: string, input: unknown, record: Run): void {
   child.stderr.setEncoding("utf8");
   child.stdout.on("data", (part: string) => { stdout += part; if (stdout.length > 2 * 1024 * 1024) tooLarge = true; });
   child.stderr.on("data", (part: string) => { stderr = (stderr + part).slice(-256 * 1024); });
-  child.on("error", err => { record.status = "failed"; record.error = err.message; record.finishedAt = new Date().toISOString(); });
+  let spawnError: string | undefined;
+  child.on("error", err => { spawnError = err.message; });
   child.on("close", code => {
     record.finishedAt = new Date().toISOString();
+    if (spawnError) { record.status = "failed"; record.error = spawnError; return; }
     if (tooLarge) { record.status = "failed"; record.error = "Python stdout exceeded 2 MiB"; return; }
     if (code !== 0) { record.status = "failed"; record.error = stderr || "Python exited with code " + code; return; }
     try { record.result = JSON.parse(stdout.trim()); record.status = "completed"; }
